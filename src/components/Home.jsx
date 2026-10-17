@@ -2,6 +2,7 @@ import React from 'react';
 // นำเข้ารูปภาพสำหรับส่วนที่ 1 และ 2
 import teachingImg from '../assets/Teaching-cuate.svg';
 import teacherBoardImg from '../assets/Teacher-blackboard.svg';
+import happyStudentImg from '../assets/Happy_student.svg';
 
 function Home() {
   return (
@@ -90,6 +91,38 @@ function Home() {
             <button className="self-end bg-[#799eff] hover:bg-[#5a7ecc] text-white px-8 py-2.5 rounded-lg font-medium transition-colors shadow-sm">
               คุณครูของเรา
             </button>
+          </div>
+
+        </div>
+        <div className="mt-32 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+
+          {/* คอลัมน์ซ้าย: ข้อความบรรยาย */}
+          <div className="flex flex-col items-start text-left">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#333] mb-6 leading-snug">
+              ก้าวเล็ก ๆ ของน้อง ๆ สู่ความสำเร็จที่ยิ่งใหญ่
+            </h2>
+            
+            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-8">
+              ไม่ว่าจะเป็นการเพิ่มเกรด การสอบเข้าโรงเรียนดัง<br />
+              หรือการเตรียมสอบเข้ามหาวิทยาลัย เราพร้อมเคียงข้างเสมอ<br />
+              ทุกความตั้งใจของเด็ก ๆ<br />
+              คือแรงผลักดันให้เราพัฒนาหลักสูตรและวิธีสอนให้ดียิ่งขึ้น<br />
+              สถาบันของเราเน้นการเรียนที่เป็นมิตร ครูดูแลใกล้ชิด<br />
+              ทำให้เด็กกล้าเรียน กล้าถาม และสนุกกับทุกวิชา
+            </p>
+            
+            <button className="bg-[#799eff] hover:bg-[#5a7ecc] text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-sm">
+              นักเรียนของเรา
+            </button>
+          </div>
+
+          {/* คอลัมน์ขวา: รูปภาพเด็กนักเรียน */}
+          <div className="flex justify-center md:justify-center">
+            <img 
+              src={happyStudentImg} 
+              alt="Happy Students" 
+              className="w-full max-w-[450px] object-contain drop-shadow-sm"
+            />
           </div>
 
         </div>
