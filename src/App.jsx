@@ -8,10 +8,11 @@ function App() {
   return (
     <div>
       <Navbar />
+      <Login />
       {/*<Profile />*/}
       {/*<Home />*/}
-      {/*<Login /*/}
-      <RoleSelection />
+      
+      {/*<RoleSelection />*/}
       {/* <UserManagement /> */}
     </div>
   )

@@ -1,6 +1,20 @@
 import React from 'react';
-
+import { supabase } from "../../service/supabaseClient";
 function Login() {
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // ให้เด้งกลับมาที่หน้าเว็บของเราหลังจากล็อกอินสำเร็จ
+        redirectTo: 'http://localhost:5174' 
+      }
+    });
+
+    if (error) {
+      console.error("เกิดข้อผิดพลาดในการล็อกอิน:", error.message);
+      alert("ไม่สามารถเข้าสู่ระบบได้ โปรดลองอีกครั้ง");
+    }
+  };
   return (
     // Wrapper คลุมทั้งหน้าจอพร้อมสีพื้นหลังแบบไล่สี (ใช้ Inline Style สำหรับ Gradient)
     <div 
@@ -12,12 +26,11 @@ function Login() {
           เข้าสู่ระบบ
         </h2>
         {/* Loginด้วยGoogle */}
-        <button className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-600 py-2.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
-          <img 
-            src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" 
-            alt="Google Logo" 
-            className="w-5 h-5" 
-          />
+        <button 
+          onClick={handleGoogleLogin}
+          className="flex items-center justify-center gap-3 w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-lg text-sm md:text-base font-medium hover:bg-gray-50 transition-colors shadow-sm mb-6"
+        >
+          <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo" className="w-5 h-5" />
           เข้าสู่ระบบด้วย Google
         </button>
       </div>
