@@ -1,8 +1,8 @@
 import React from 'react';
 // นำเข้ารูปภาพสำหรับส่วนที่ 1 และ 2
-import teachingImg from '../assets/Teaching-cuate.svg';
-import teacherBoardImg from '../assets/Teacher-blackboard.svg';
-import happyStudentImg from '../assets/Happy_student.svg';
+import teachingImg from '../../assets/Teaching-cuate.svg';
+import teacherBoardImg from "../../assets/Teacher-blackboard.svg";
+import happyStudentImg from "../../assets/Happy_student.svg";
 
 function Home() {
   return (

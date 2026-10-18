@@ -1,4 +1,4 @@
-import Navbar from './components/sections/Navbar'
+import Navbar from './components/Navbar'
 import Login from './components/sections/Login';
 import UserManagement from './components/sections/UserManagement';
 import Home from './components/sections/Home';
