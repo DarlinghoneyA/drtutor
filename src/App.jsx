@@ -6,8 +6,8 @@ function App() {
   return (
     <div>
       <Navbar />
-      <Home />
-      {/* <Login /> */}
+      {/*<Home />*/}
+      {<Login />}
       {/* <UserManagement /> */}
     </div>
   )
