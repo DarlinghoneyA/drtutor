@@ -1,13 +1,17 @@
-import Navbar from './components/Navbar'
-import Login from './components/Login';
-import UserManagement from './components/UserManagement';
-import Home from './components/Home';
+import Navbar from './components/sections/Navbar'
+import Login from './components/sections/Login';
+import UserManagement from './components/sections/UserManagement';
+import Home from './components/sections/Home';
+import Profile from './components/sections/Profile';
+import RoleSelection from './components/sections/Roleselection';
 function App() {
   return (
     <div>
       <Navbar />
+      {/*<Profile />*/}
       {/*<Home />*/}
-      {<Login />}
+      {/*<Login /*/}
+      <RoleSelection />
       {/* <UserManagement /> */}
     </div>
   )
