@@ -4,7 +4,6 @@ function Navbar() {
   // สร้าง State สำหรับตรวจสอบว่ามีการเลื่อนหน้าจอลงมาหรือยัง
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // ใช้ useEffect เพื่อจับ Event การ Scroll ของหน้าเว็บ
   useEffect(() => {
     const handleScroll = () => {
       // ถ้าเลื่อนลงมามากกว่า 0 พิกเซล ให้ตั้งค่าเป็น true
