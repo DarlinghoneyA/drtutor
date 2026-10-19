@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import drTutorLogo from "../assets/Drtutor-logo.png";
+import { Link } from 'react-router-dom';
 function Navbar() {
   // สร้าง State สำหรับตรวจสอบว่ามีการเลื่อนหน้าจอลงมาหรือยัง
   const [isScrolled, setIsScrolled] = useState(false);
@@ -37,10 +38,13 @@ function Navbar() {
           <li><a href="#contact" className="text-[#799eff] font-medium hover:text-[#5a7ecc] transition-colors">ติดต่อเรา</a></li>
         </ul>
 
-        <div>
-          <button className="bg-[#2FA084] hover:bg-[#248169] text-white px-8 py-2.5 rounded-full font-bold transition-colors">
+        <div> {/* Login Button */}
+          <Link 
+            to="/login" 
+            className="bg-[#2FA084] hover:bg-[#248169] text-white px-8 py-2.5 rounded-full font-bold transition-colors inline-block text-center"
+          >
             Login
-          </button>
+          </Link>
         </div>
 
       </div>
