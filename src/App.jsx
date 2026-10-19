@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './service/supabaseClient';
-import Navbar from './components/Navbar'
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import Login from './components/sections/Login';
 import UserManagement from './components/sections/UserManagement';
 import Home from './components/sections/Home';
@@ -36,8 +37,7 @@ function App() {
       <Navbar />
       
       <Routes>
-        {/* หน้า Home: เข้าถึงได้อิสระ ไม่บังคับล็อกอิน */}
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<><Home /><Footer /></>} />
         
         {/* หน้า Login: ถ้าล็อกอินสำเร็จแล้ว (มี session) ให้เด้งกลับไปหน้า Home (/) */}
         <Route 
