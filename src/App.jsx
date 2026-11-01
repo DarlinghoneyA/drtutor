@@ -9,6 +9,8 @@ import Login from './components/sections/Login';
 import RoleSelection from './components/sections/Roleselection';
 import StudentRegistration from './components/sections/StudentRegistration';
 import Footer from './components/Footer'; 
+import CoursesManagement from './components/sections/CoursesManagement';
+import AddCourse from './components/sections/AddCourse';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -106,6 +108,8 @@ function App() {
                  : <Navigate to="/" />
               } 
             />
+            <Route path="/coursesmanagement" element={<CoursesManagement />} />
+            <Route path="/add-course" element={<AddCourse />} />
           </Routes>
         </main>
 
