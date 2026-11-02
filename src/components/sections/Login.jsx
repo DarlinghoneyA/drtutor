@@ -6,7 +6,7 @@ function Login() {
       provider: 'google',
       options: {
         // ให้เด้งกลับมาที่หน้าเว็บของเราหลังจากล็อกอินสำเร็จ
-        redirectTo: 'http://localhost:5173' 
+        redirectTo: window.location.origin 
       }
     });
 
