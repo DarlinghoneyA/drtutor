@@ -77,7 +77,17 @@ function Navbar() {
     { name: 'ติดต่อเรา', path: '/contact' },
   ];
 
-  const currentMenu = userData?.Role === 'Student' ? studentMenu : defaultMenu;
+  const adminMenu = [
+    { name: 'คอร์สเรียน', path: '' },
+    { name: 'จัดตารางเรียน', path: '' },
+    { name: 'จัดการบัญชี', path: '' },
+    { name: 'จัดการผู้ใช้งาน', path: '/usermangement' },
+    { name: 'สถิติ', path: '' },
+  ];
+
+  const currentMenu = userData?.Role === 'Admin' ? adminMenu 
+                    : userData?.Role === 'Student' ? studentMenu 
+                    : defaultMenu;
 
   return (
     // คืนค่าโครงสร้าง Navbar แบบเดิมของคุณ

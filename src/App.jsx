@@ -13,6 +13,7 @@ import CoursesManagement from './components/sections/CoursesManagement';
 import AddCourse from './components/sections/AddCourse';
 import Courses from './components/sections/Courses';
 import CourseDetails from './components/sections/CourseDetails';
+import UserManagement from './components/sections/UserManagement';
 function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -113,6 +114,7 @@ function App() {
             <Route path="/add-course" element={<AddCourse />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/course-details/:id" element={<CourseDetails />} />
+            <Route path="/usermangement" element={<UserManagement />} />
           </Routes>
         </main>
 

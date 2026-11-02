@@ -1,43 +1,101 @@
-import React, { useState } from 'react';
-import { SquarePen, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Edit, Trash2 } from 'lucide-react';
+import { supabase } from '../../service/supabaseClient';
 
 function UserManagement() {
-  // State สำหรับเก็บค่าว่าตอนนี้ผู้ใช้กำลังเลือก Tab ไหนอยู่
   const [activeTab, setActiveTab] = useState('all');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // ข้อมูลเมนูแท็บด้านซ้าย
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        // 1. ดึงข้อมูลผู้ใช้งานทั้งหมดจากตาราง Users[cite: 15]
+        const { data: usersData, error: usersError } = await supabase
+          .from('Users')
+          .select('*')
+          .order('Created_at', { ascending: false }); 
+
+        if (usersError) throw usersError;
+
+        // 2. ดึงข้อมูลชั้นปีจากตาราง Student ทั้งหมด[cite: 16]
+        const { data: studentsData, error: studentsError } = await supabase
+          .from('Student')
+          .select('UserID, Grade_level');
+
+        if (studentsError) throw studentsError;
+
+        // 3. นำข้อมูลมาประกอบร่างกัน (Merge) โดยเช็คจาก UserID
+        const mergedData = usersData.map(user => {
+          const studentInfo = studentsData.find(s => s.UserID === user.UserID);
+          return {
+            ...user,
+            Grade_level: studentInfo ? studentInfo.Grade_level : '-'
+          };
+        });
+
+        setUsers(mergedData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        alert('พบข้อผิดพลาดในการดึงข้อมูล: ' + (error.message || 'โปรดตรวจสอบ Console'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  const translateRole = (role) => {
+    if (role === 'Teacher') return 'คุณครู';
+    if (role === 'Student') return 'นักเรียน';
+    if (role === 'Parent') return 'ผู้ปกครอง';
+    if (role === 'Admin') return 'ผู้ดูแลระบบ';
+    return role || '-';
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('th-TH', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).replace(/\//g, ' / ');
+  };
+
   const tabs = [
-    { id: 'all', label: 'ผู้ใช้งานทั้งหมด' },
-    { id: 'teacher', label: 'ครู' },
-    { id: 'student', label: 'นักเรียน' },
-    { id: 'parent', label: 'ผู้ปกครอง' },
+    { id: 'all', label: 'ผู้ใช้งานทั้งหมด', roleValue: 'all' },
+    { id: 'teacher', label: 'ครู', roleValue: 'Teacher' },
+    { id: 'student', label: 'นักเรียน', roleValue: 'Student' },
+    { id: 'parent', label: 'ผู้ปกครอง', roleValue: 'Parent' },
   ];
 
-  // ข้อมูลจำลอง (Mock Data) สำหรับแสดงผลในตาราง
-  // ในอนาคตคุณจะต้องดึงข้อมูลส่วนนี้มาจาก Backend / Database
-  const mockData = [
-    { id: 1, name: 'น้องบี', role: 'นักเรียน', email: 'example@mail.com', date: '10 / 01 / 2025', grade: 'มัธยมศึกษาปีที่ 6', phone: '0853091237', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png' },
-    { id: 2, name: 'ครูเอ', role: 'คุณครู', email: 'example@mail.com', date: '10 / 01 / 2025', grade: '-', phone: '0853091237', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png' },
-  ];
+  const filteredUsers = users.filter(user => {
+    const currentTabInfo = tabs.find(t => t.id === activeTab);
+    if (currentTabInfo.roleValue === 'all') return true;
+    return user.Role === currentTabInfo.roleValue;
+  });
 
   return (
-    // พื้นหลังสีเทาอ่อนแบบในรูป และเว้นระยะด้านบน (pt-32) เผื่อ Navbar ที่ลอยอยู่
-    <div className="min-h-screen bg-[#F4F6FA] pt-32 pb-10 px-8 font-sans">
+    <div className="min-h-screen bg-[#f4f6fa] pt-32 pb-12 px-4 font-sans">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-10 text-[#333]">จัดการผู้ใช้งาน</h1>
+        
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8 tracking-tight">
+          จัดการผู้ใช้งาน
+        </h1>
 
-        <div className="flex flex-col md:flex-row gap-8">
+        <div className="flex flex-col md:flex-row gap-6">
           
-          {/* ส่วนเมนูด้านซ้าย (Sidebar Tabs) */}
-          <div className="w-full md:w-56 flex flex-col gap-1">
+          <div className="w-full md:w-48 flex flex-col bg-transparent md:bg-white rounded-none md:rounded-lg overflow-hidden md:shadow-sm h-fit">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-3 px-6 text-center font-medium transition-colors duration-200 ${
+                className={`py-3 px-4 text-center font-bold transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-[#799eff] text-white rounded-md'
-                    : 'text-[#333] hover:bg-gray-200 rounded-md bg-transparent'
+                    ? 'bg-[#799eff] text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 {tab.label}
@@ -45,46 +103,60 @@ function UserManagement() {
             ))}
           </div>
 
-          {/* ส่วนตารางข้อมูล (Data Table) */}
           <div className="flex-1 overflow-x-auto">
-            {/* ใส่ min-w-max เพื่อบังคับไม่ให้ตารางบีบตัวจนพังในจอขนาดเล็ก */}
-            <table className="w-full min-w-[800px] text-center border-collapse">
+            <table className="w-full min-w-[800px] text-center">
               <thead>
-                <tr className="text-[#799eff] text-sm border-b border-[#799eff]">
-                  <th className="pb-4 px-2 font-semibold">รูป</th>
-                  <th className="pb-4 px-2 font-semibold">ชื่อ</th>
-                  <th className="pb-4 px-2 font-semibold">ตำแหน่ง</th>
-                  <th className="pb-4 px-2 font-semibold">อีเมล</th>
-                  <th className="pb-4 px-2 font-semibold">วันที่เข้าใช้งาน</th>
-                  <th className="pb-4 px-2 font-semibold">ชั้นปี</th>
-                  <th className="pb-4 px-2 font-semibold">เบอร์โทร</th>
-                  <th className="pb-4 px-2 font-semibold"></th>
+                <tr className="text-[#799eff] text-sm font-bold border-b border-[#799eff]">
+                  <th className="pb-3 px-2 font-medium">รูป</th>
+                  <th className="pb-3 px-2 font-medium">ชื่อ</th>
+                  <th className="pb-3 px-2 font-medium">ตำแหน่ง</th>
+                  <th className="pb-3 px-2 font-medium">ไลน์ไอดี</th>
+                  <th className="pb-3 px-2 font-medium">วันที่เข้าใช้งาน</th>
+                  <th className="pb-3 px-2 font-medium">ชั้นปี</th>
+                  <th className="pb-3 px-2 font-medium">เบอร์โทร</th>
+                  <th className="pb-3 px-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {mockData.map((user) => (
-                  <tr key={user.id} className="border-b border-gray-200 hover:bg-white transition-colors text-sm text-[#333]">
-                    <td className="py-4 px-2">
-                      <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover border border-gray-300" />
-                    </td>
-                    <td className="py-4 px-2 font-medium">{user.name}</td>
-                    <td className="py-4 px-2">{user.role}</td>
-                    <td className="py-4 px-2">{user.email}</td>
-                    <td className="py-4 px-2">{user.date}</td>
-                    <td className="py-4 px-2">{user.grade}</td>
-                    <td className="py-4 px-2">{user.phone}</td>
-                    <td className="py-4 px-2">
-                      <div className="flex gap-4 justify-end">
-                        <button className="text-gray-700 hover:text-blue-500 transition-colors" title="แก้ไข">
-                          <SquarePen size={18} />
-                        </button>
-                        <button className="text-gray-700 hover:text-red-500 transition-colors" title="ลบ">
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" className="py-12 text-gray-500">กำลังโหลดข้อมูล...</td>
+                  </tr>
+                ) : filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
+                    <tr key={user.UserID} className="text-gray-800 text-sm hover:bg-white/50 transition-colors">
+                      <td className="py-3 px-2">
+                        <img 
+                          src={user.AvatarURL || 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=100&auto=format&fit=crop'} 
+                          alt={user.Profile_name || 'User'} 
+                          className="w-10 h-10 rounded-full mx-auto object-cover shadow-sm border border-gray-200"
+                        />
+                      </td>
+                      <td className="py-3 px-2">{user.Profile_name || '-'}</td>
+                      <td className="py-3 px-2">{translateRole(user.Role)}</td>
+                      <td className="py-3 px-2">{user.LineID || '-'}</td>
+                      <td className="py-3 px-2">{formatDate(user.Created_at)}</td>
+                      <td className="py-3 px-2">{user.Grade_level}</td>
+                      <td className="py-3 px-2">{user.Phone_number || '-'}</td>
+                      <td className="py-3 px-2">
+                        <div className="flex items-center justify-center gap-3 text-gray-600">
+                          <button className="hover:text-[#799eff] transition-colors p-1" title="แก้ไข">
+                            <Edit size={18} />
+                          </button>
+                          <button className="hover:text-red-500 transition-colors p-1" title="ลบ">
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" className="py-12 text-gray-400">
+                      ไม่พบข้อมูลผู้ใช้งานในหมวดหมู่นี้
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
