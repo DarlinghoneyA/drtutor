@@ -11,7 +11,8 @@ import StudentRegistration from './components/sections/StudentRegistration';
 import Footer from './components/Footer'; 
 import CoursesManagement from './components/sections/CoursesManagement';
 import AddCourse from './components/sections/AddCourse';
-
+import Courses from './components/sections/Courses';
+import CourseDetails from './components/sections/CourseDetails';
 function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -110,6 +111,8 @@ function App() {
             />
             <Route path="/coursesmanagement" element={<CoursesManagement />} />
             <Route path="/add-course" element={<AddCourse />} />
+            <Route path="/courses" element={<Courses />} />
+            <Route path="/course-details/:id" element={<CourseDetails />} />
           </Routes>
         </main>
 

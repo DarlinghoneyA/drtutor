@@ -5,8 +5,7 @@ function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // ให้เด้งกลับมาที่หน้าเว็บของเราหลังจากล็อกอินสำเร็จ
-        redirectTo: window.location.origin 
+        redirectTo: window.location.origin // ระบบจะดึง URL ปัจจุบันมาใช้อัตโนมัติ
       }
     });
 
