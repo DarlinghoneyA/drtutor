@@ -78,8 +78,8 @@ function Navbar() {
   ];
 
   const adminMenu = [
-    { name: 'คอร์สเรียน', path: '' },
-    { name: 'จัดตารางเรียน', path: '' },
+    { name: 'จัดการคอร์สเรียน', path: '/coursesmanagement' },
+    { name: 'จัดการตารางสอน', path: '/schedule-management' },
     { name: 'จัดการบัญชี', path: '' },
     { name: 'จัดการผู้ใช้งาน', path: '/usermangement' },
     { name: 'สถิติ', path: '' },

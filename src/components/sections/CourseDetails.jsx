@@ -8,6 +8,7 @@ function CourseDetails() {
   const navigate = useNavigate();
   
   const [course, setCourse] = useState(null);
+  const [courseTeachers, setCourseTeachers] = useState([]); // State สำหรับเก็บรายชื่อครู
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -16,16 +17,54 @@ function CourseDetails() {
   const [installmentMonths, setInstallmentMonths] = useState(null); 
 
   useEffect(() => {
-    const fetchCourseDetail = async () => {
+    const fetchCourseDetailAndTeachers = async () => {
       try {
-        const { data, error } = await supabase
+        // 1. ดึงข้อมูลรายละเอียดคอร์สเรียน
+        const { data: courseData, error: courseError } = await supabase
           .from('Courses')
           .select('*')
           .eq('CourseID', id)
           .single();
 
-        if (error) throw error;
-        if (data) setCourse(data);
+        if (courseError) throw courseError;
+        if (courseData) setCourse(courseData);
+
+        // 2. ดึงข้อมูลครูที่สอนคอร์สนี้จาก Courses_Teacher
+        const { data: ctData, error: ctError } = await supabase
+          .from('Courses_Teacher')
+          .select('TeacherID')
+          .eq('CourseID', id);
+
+        if (ctError) throw ctError;
+
+        // 3. ถ่ามีครูสอน ให้นำ TeacherID ไปดึงชื่อจาก Users
+        if (ctData && ctData.length > 0) {
+          const teacherIds = ctData.map(ct => ct.TeacherID);
+          
+          const { data: teachersData } = await supabase
+            .from('Teachers')
+            .select('TeacherID, UserID')
+            .in('TeacherID', teacherIds);
+
+          if (teachersData) {
+            const userIds = teachersData.map(t => t.UserID);
+            const { data: usersData } = await supabase
+              .from('Users')
+              .select('UserID, Profile_name')
+              .in('UserID', userIds);
+
+            // นำข้อมูลมาจับคู่กัน
+            const teachersList = teachersData.map(t => {
+              const user = usersData?.find(u => u.UserID === t.UserID);
+              return {
+                TeacherID: t.TeacherID,
+                Profile_name: user ? user.Profile_name : 'ไม่ระบุชื่อ'
+              };
+            });
+            
+            setCourseTeachers(teachersList);
+          }
+        }
       } catch (error) {
         console.error('Error fetching course details:', error);
       } finally {
@@ -33,7 +72,7 @@ function CourseDetails() {
       }
     };
 
-    if (id) fetchCourseDetail();
+    if (id) fetchCourseDetailAndTeachers();
   }, [id]);
 
   const handleEnroll = async () => {
@@ -65,22 +104,19 @@ function CourseDetails() {
         .select('EnrollmentID')
         .eq('StudentID', studentData.StudentID)
         .eq('CourseID', id)
-        .maybeSingle(); // ใช้ maybeSingle() เพื่อไม่ให้เกิด Error กรณีหาไม่เจอ (คือยังไม่เคยสมัคร)
+        .maybeSingle(); 
 
       if (checkError) throw checkError;
       
-      // ถ้ามีข้อมูล existingEnrollment แปลว่าเคยสมัครไปแล้ว
       if (existingEnrollment) {
         alert('คุณได้ลงทะเบียนคอร์สเรียนนี้ไปแล้ว ไม่สามารถสมัครซ้ำได้');
         setIsSubmitting(false);
-        return; // หยุดการทำงานทันที
+        return; 
       }
 
-      // 1. แปลงค่าให้ตรงกับ Enum ใน Database (ตัวพิมพ์ใหญ่)
       const dbPaymentType = paymentMethod === 'full' ? 'Full' : 'Installment';
       const dbStatus = 'Active';
 
-      // 2. บันทึกข้อมูลลงตาราง Enrollments
       const { data: enrollmentData, error: enrollError } = await supabase
         .from('Enrollments')
         .insert([
@@ -88,8 +124,8 @@ function CourseDetails() {
             StudentID: studentData.StudentID,
             CourseID: id,
             EnrollDate: new Date().toISOString(),
-            Payment_type: dbPaymentType, // ใช้ค่าที่แปลงแล้ว
-            Status: dbStatus             // ใช้ค่า Active พิมพ์ใหญ่
+            Payment_type: dbPaymentType,
+            Status: dbStatus
           }
         ])
         .select()
@@ -98,8 +134,6 @@ function CourseDetails() {
       if (enrollError) throw enrollError;
 
       const newEnrollmentId = enrollmentData.EnrollmentID;
-
-      // 3. คำนวณตารางการชำระเงิน (Payment Schedules)
       const schedules = [];
       const totalMonths = paymentMethod === 'full' ? 1 : installmentMonths;
       const coursePrice = course.Price || 0;
@@ -119,7 +153,6 @@ function CourseDetails() {
         });
       }
 
-      // 4. บันทึกงวดชำระทั้งหมดลงตาราง Payment_schedules
       const { error: scheduleError } = await supabase
         .from('Payment_schedules')
         .insert(schedules);
@@ -153,6 +186,11 @@ function CourseDetails() {
     );
   }
 
+  // ตัวแปรเช็คการแสดงปุ่มรูปแบบการเรียน
+  const cType = course.Course_type || '';
+  const showSingle = cType === 'แบบเดี่ยว' || cType === 'แบบกลุ่มและแบบเดี่ยว' || cType === 'Private' || cType === 'Both' || cType === '';
+  const showGroup = cType === 'แบบกลุ่ม' || cType === 'แบบกลุ่มและแบบเดี่ยว' || cType === 'Group' || cType === 'Both' || cType === '';
+
   return (
     <div className="min-h-screen bg-[#f4f6fa] pt-28 pb-12 px-4 font-sans">
       <div className="max-w-6xl mx-auto">
@@ -168,10 +206,20 @@ function CourseDetails() {
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 leading-tight">
                 {course.Course_name}
               </h2>
-              <div className="flex items-center gap-4 text-[#799eff] text-sm font-medium">
-                <div className="flex items-center gap-1"><User size={16} /> ครูเอ</div>
-                <div className="flex items-center gap-1"><User size={16} /> ครูบี</div>
-                <div className="flex items-center gap-1"><User size={16} /> ครูซี</div>
+              
+              {/* แสดงรายชื่อครูผู้สอนจากฐานข้อมูลจริง */}
+              <div className="flex items-center gap-4 text-[#799eff] text-sm font-medium flex-wrap">
+                {courseTeachers.length > 0 ? (
+                  courseTeachers.map((teacher, index) => (
+                    <div key={index} className="flex items-center gap-1">
+                      <User size={16} /> {teacher.Profile_name}
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center gap-1 text-gray-400">
+                    <User size={16} /> ไม่ระบุครูผู้สอน
+                  </div>
+                )}
               </div>
             </div>
 
@@ -200,20 +248,29 @@ function CourseDetails() {
               <div className="mb-6">
                 <h3 className="text-center font-bold text-gray-800 mb-4 text-lg">เลือกรูปแบบการเรียน</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => setLearningFormat('single')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-colors ${learningFormat === 'single' ? 'border-[#f97316] bg-orange-50 text-[#f97316]' : 'border-gray-200 text-gray-400 hover:border-orange-200'}`}
-                  >
-                    <User size={28} className="mb-1" />
-                    <span className="text-sm font-medium">แบบเดี่ยว</span>
-                  </button>
-                  <button 
-                    onClick={() => setLearningFormat('group')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-colors ${learningFormat === 'group' ? 'border-[#f97316] bg-orange-50 text-[#f97316]' : 'border-gray-200 text-gray-400 hover:border-orange-200'}`}
-                  >
-                    <Users size={28} className="mb-1" />
-                    <span className="text-sm font-medium">แบบกลุ่ม</span>
-                  </button>
+                  
+                  {/* ปุ่มแบบเดี่ยว (แสดงตามเงื่อนไข Course_type) */}
+                  {showSingle && (
+                    <button 
+                      onClick={() => setLearningFormat('single')}
+                      className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-colors ${learningFormat === 'single' ? 'border-[#f97316] bg-orange-50 text-[#f97316]' : 'border-gray-200 text-gray-400 hover:border-orange-200'} ${!showGroup ? 'col-span-2' : ''}`}
+                    >
+                      <User size={28} className="mb-1" />
+                      <span className="text-sm font-medium">แบบเดี่ยว</span>
+                    </button>
+                  )}
+
+                  {/* ปุ่มแบบกลุ่ม (แสดงตามเงื่อนไข Course_type) */}
+                  {showGroup && (
+                    <button 
+                      onClick={() => setLearningFormat('group')}
+                      className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-colors ${learningFormat === 'group' ? 'border-[#f97316] bg-orange-50 text-[#f97316]' : 'border-gray-200 text-gray-400 hover:border-orange-200'} ${!showSingle ? 'col-span-2' : ''}`}
+                    >
+                      <Users size={28} className="mb-1" />
+                      <span className="text-sm font-medium">แบบกลุ่ม</span>
+                    </button>
+                  )}
+
                 </div>
               </div>
 
@@ -225,7 +282,6 @@ function CourseDetails() {
                       setPaymentMethod('full');
                       setInstallmentMonths(null);
                     }}
-                    /* แก้ไขให้เงื่อนไขตรงกับค่าพิมพ์เล็ก */
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-colors ${paymentMethod === 'full' ? 'border-[#f97316] bg-orange-50 text-[#f97316]' : 'border-gray-200 text-gray-400 hover:border-orange-200'}`}
                   >
                     <CreditCard size={28} className="mb-1" />
@@ -233,7 +289,6 @@ function CourseDetails() {
                   </button>
                   <button 
                     onClick={() => setPaymentMethod('installment')}
-                    /* แก้ไขให้เงื่อนไขตรงกับค่าพิมพ์เล็ก */
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-colors ${paymentMethod === 'installment' ? 'border-[#f97316] bg-orange-50 text-[#f97316]' : 'border-gray-200 text-gray-400 hover:border-orange-200'}`}
                   >
                     <Calendar size={28} className="mb-1" />
@@ -241,7 +296,6 @@ function CourseDetails() {
                   </button>
                 </div>
 
-                {/* แก้ไขให้แสดงปุ่มเมื่อเป็น installment พิมพ์เล็ก */}
                 {paymentMethod === 'installment' && (
                   <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in duration-300">
                     <p className="text-center text-sm font-bold text-gray-600 mb-3">เลือกระยะเวลาผ่อนชำระ</p>
