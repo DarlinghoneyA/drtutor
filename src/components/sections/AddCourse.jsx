@@ -27,7 +27,7 @@ function AddCourse() {
   const [allTeachers, setAllTeachers] = useState([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
 
-  // โหมดแก้ไข: ดึงข้อมูลคอร์สมาใส่ฟอร์ม
+  // โหมดแก้ไข: ดึงข้อมูลคอร์สมาใส่ฟอร์ม / โหมดสร้าง: ล้างฟอร์ม
   useEffect(() => {
     if (!isEdit) {
       setFormData(EMPTY_FORM);
@@ -58,13 +58,12 @@ function AddCourse() {
     loadCourse();
   }, [id, isEdit, navigate]);
 
-  // โหมดแก้ไข: โหลดรายชื่อครูทั้งหมดไว้ทำ dropdown
+  // โหลดรายชื่อครูที่อนุมัติแล้วไว้ทำ dropdown (ทั้งสองโหมด)
   useEffect(() => {
-    if (!isEdit) return;
     apiFetch('/admin/teachers')
       .then(setAllTeachers)
       .catch((err) => console.error('โหลดรายชื่อครูไม่สำเร็จ:', err));
-  }, [isEdit]);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -84,6 +83,10 @@ function AddCourse() {
       description: formData.description,
       isActive: formData.isActive,
     };
+    // โหมดสร้าง: ส่งครูที่เลือกไว้ไปพร้อมกัน
+    if (!isEdit) {
+      body.teacherIds = courseTeachers.map((t) => t.teacherId);
+    }
 
     try {
       await apiFetch(isEdit ? `/admin/courses/${id}` : '/admin/courses', {
@@ -100,9 +103,19 @@ function AddCourse() {
     }
   };
 
-  // ---- จัดการครูผู้สอน (บันทึกทันที ไม่ต้องกดบันทึกฟอร์ม) ----
+  // ---- จัดการครูผู้สอน ----
   const handleAddTeacher = async () => {
     if (!selectedTeacherId) return;
+
+    // โหมดสร้าง: เก็บไว้ในหน้าเว็บก่อน
+    if (!isEdit) {
+      const teacher = allTeachers.find((t) => t.teacherId === selectedTeacherId);
+      if (teacher) setCourseTeachers((prev) => [...prev, teacher]);
+      setSelectedTeacherId('');
+      return;
+    }
+
+    // โหมดแก้ไข: บันทึกทันที
     try {
       const updated = await apiFetch(`/admin/courses/${id}/teachers`, {
         method: 'POST',
@@ -116,6 +129,13 @@ function AddCourse() {
   };
 
   const handleRemoveTeacher = async (teacherId) => {
+    // โหมดสร้าง: เอาออกจากรายการในหน้าเว็บ
+    if (!isEdit) {
+      setCourseTeachers((prev) => prev.filter((t) => t.teacherId !== teacherId));
+      return;
+    }
+
+    // โหมดแก้ไข: ลบทันที
     if (!window.confirm('เอาครูคนนี้ออกจากคอร์สใช่ไหม?')) return;
     try {
       const updated = await apiFetch(`/admin/courses/${id}/teachers/${teacherId}`, { method: 'DELETE' });
@@ -199,46 +219,47 @@ function AddCourse() {
             <span className="text-sm text-gray-500">(ถ้าปิด นักเรียนจะไม่เห็นคอร์สนี้)</span>
           </label>
 
-          {/* ครูผู้สอน: แสดงเฉพาะโหมดแก้ไข */}
-          {isEdit && (
-            <div className="bg-white border border-[#a5c0ff] rounded-md p-5">
-              <label className={labelClassName}>ครูผู้สอน</label>
+          {/* ครูผู้สอน */}
+          <div className="bg-white border border-[#a5c0ff] rounded-md p-5">
+            <label className={labelClassName}>ครูผู้สอน</label>
+            <p className="text-xs text-gray-400 mb-3">
+              {isEdit ? 'เพิ่มหรือลบครูจะบันทึกทันที' : 'ครูที่เลือกจะถูกบันทึกพร้อมกับคอร์สตอนกดยืนยัน'}
+            </p>
 
-              {courseTeachers.length === 0 ? (
-                <p className="text-sm text-gray-400 mb-4">ยังไม่มีครูในคอร์สนี้</p>
-              ) : (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {courseTeachers.map((t) => (
-                    <span key={t.teacherId} className="flex items-center gap-1.5 bg-[#eef3ff] text-[#4a6fd1] px-3 py-1.5 rounded-full text-sm font-medium">
-                      <User size={14} /> {t.name}
-                      <button type="button" onClick={() => handleRemoveTeacher(t.teacherId)} className="hover:text-red-500" title="เอาออก">
-                        <X size={14} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <select value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)} className={inputClassName}>
-                  <option value="">เลือกครูที่จะเพิ่ม</option>
-                  {availableTeachers.map((t) => (
-                    <option key={t.teacherId} value={t.teacherId}>
-                      {t.name}{t.fullName && t.fullName !== t.name ? ` (${t.fullName})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={handleAddTeacher}
-                  disabled={!selectedTeacherId}
-                  className="bg-[#2FA084] hover:bg-[#248169] disabled:bg-gray-300 text-white px-5 rounded-md font-bold whitespace-nowrap"
-                >
-                  เพิ่มครู
-                </button>
+            {courseTeachers.length === 0 ? (
+              <p className="text-sm text-gray-400 mb-4">ยังไม่มีครูในคอร์สนี้</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {courseTeachers.map((t) => (
+                  <span key={t.teacherId} className="flex items-center gap-1.5 bg-[#eef3ff] text-[#4a6fd1] px-3 py-1.5 rounded-full text-sm font-medium">
+                    <User size={14} /> {t.name}
+                    <button type="button" onClick={() => handleRemoveTeacher(t.teacherId)} className="hover:text-red-500" title="เอาออก">
+                      <X size={14} />
+                    </button>
+                  </span>
+                ))}
               </div>
+            )}
+
+            <div className="flex gap-3">
+              <select value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)} className={inputClassName}>
+                <option value="">เลือกครูที่จะเพิ่ม</option>
+                {availableTeachers.map((t) => (
+                  <option key={t.teacherId} value={t.teacherId}>
+                    {t.name}{t.fullName && t.fullName !== t.name ? ` (${t.fullName})` : ''}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleAddTeacher}
+                disabled={!selectedTeacherId}
+                className="bg-[#2FA084] hover:bg-[#248169] disabled:bg-gray-300 text-white px-5 rounded-md font-bold whitespace-nowrap"
+              >
+                เพิ่มครู
+              </button>
             </div>
-          )}
+          </div>
 
           <div>
             <label className={labelClassName}>อัปโหลดรูปภาพ</label>
