@@ -169,48 +169,57 @@ function StudentRegistration() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const submitForm = async () => {
+    const submitForm = async () => {
     try {
       setLoading(true);
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        alert("ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่');
         return;
       }
-      const currentUserId = user.id;
 
-      const { error: userError } = await supabase
-        .from('Users')
-        .upsert({
-          UserID: currentUserId, // ต้องแนบ Primary Key ไปด้วยเพื่อให้ upsert ทำงานถูกต้อง
-          Profile_name: formData.profileName,
-          Fullname: `${formData.firstName} ${formData.lastName}`.trim(),
-          Phone_number: formData.phone,
-          LineID: formData.lineId,
-          Role: 'Student'
-        });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          role: 'Student',
+          profileName: formData.profileName,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phoneNumber: formData.phone,
+          address: {
+            addressLine: formData.address,
+            subdistrict: formData.subDistrict,
+            district: formData.district,
+            province: formData.province,
+            postalCode: formData.postalCode,
+          },
+          student: {
+            nickname: formData.nickname,
+            birthDate: formData.birthDate,
+            schoolName: formData.school,
+            gradeLevel: formData.gradeLevel,
+          },
+        }),
+      });
 
-      if (userError) throw userError;
+      const result = await res.json();
 
-      const { error: studentError } = await supabase
-        .from('Student')
-        .insert([{
-          UserID: currentUserId,
-          Nickname: formData.nickname,
-          School_name: formData.school,
-          Grade_level: formData.gradeLevel,
-          Birth_date: formData.birthDate || null
-        }]);
+      if (!res.ok) {
+        // ถ้ากรอกผิด backend จะบอกว่าช่องไหน
+        const details = result.error?.details?.map((d) => `• ${d.message}`).join('\n');
+        alert(details || result.error?.message || 'บันทึกไม่สำเร็จ');
+        return;
+      }
 
-      if (studentError) throw studentError;
-
-      alert("ส่งข้อมูลสมัครสมาชิกเรียบร้อยแล้ว!");
-      navigate('/'); 
-
+      alert('สมัครสมาชิกเรียบร้อยแล้ว!');
+      navigate('/');
     } catch (error) {
-      console.error("Error saving data:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
+      alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้: ' + error.message);
     } finally {
       setLoading(false);
     }
