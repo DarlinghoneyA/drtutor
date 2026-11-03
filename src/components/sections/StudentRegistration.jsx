@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Pencil, ArrowRight, ArrowLeft, CheckCircle, User } from 'lucide-react';
 import { supabase } from '../../service/supabaseClient'; 
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../service/api';
+import { useAuth } from '../../context/AuthContext';
 
 // ==========================================
 // CHILD COMPONENT: ขั้นตอนที่ 1 ข้อมูลส่วนตัว
@@ -138,6 +140,7 @@ function StudentRegistration() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const totalSteps = 3;
+  const { refreshMe } = useAuth();
 
   const [formData, setFormData] = useState({
     profileName: '',
@@ -172,20 +175,9 @@ function StudentRegistration() {
     const submitForm = async () => {
     try {
       setLoading(true);
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert('ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่');
-        return;
-      }
-
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/register`, {
+      await apiFetch('/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+        body: {
           role: 'Student',
           profileName: formData.profileName,
           firstName: formData.firstName,
@@ -204,22 +196,15 @@ function StudentRegistration() {
             schoolName: formData.school,
             gradeLevel: formData.gradeLevel,
           },
-        }),
+        },
       });
 
-      const result = await res.json();
-
-      if (!res.ok) {
-        // ถ้ากรอกผิด backend จะบอกว่าช่องไหน
-        const details = result.error?.details?.map((d) => `• ${d.message}`).join('\n');
-        alert(details || result.error?.message || 'บันทึกไม่สำเร็จ');
-        return;
-      }
-
+      await refreshMe();   // ให้แอปรู้ว่าตอนนี้มี role แล้ว
       alert('สมัครสมาชิกเรียบร้อยแล้ว!');
       navigate('/');
-    } catch (error) {
-      alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้: ' + error.message);
+    } catch (err) {
+      const details = err.details?.map((d) => `• ${d.message}`).join('\n');
+      alert(details || err.message);
     } finally {
       setLoading(false);
     }

@@ -1,58 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../service/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 import { UserCircle, LogOut } from 'lucide-react';
-import drTutorLogo from "../assets/Drtutor-logo.png";
+import drTutorLogo from '../assets/Drtutor-logo.png';
 
 function Navbar() {
-  const [session, setSession] = useState(null);
-  const [userData, setUserData] = useState(null);
-  const [isScrolled, setIsScrolled] = useState(false); // เพิ่ม State สำหรับจัดการการเลื่อนจอ
+  const { session, me } = useAuth();
+  const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // ฟังก์ชันจัดการการ Scroll
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
-
-    // ฟังก์ชันดึงข้อมูลผู้ใช้
-    const fetchUserData = async (currentSession) => {
-      if (!currentSession) {
-        setUserData(null);
-        return;
-      }
-      try {
-        const { data, error } = await supabase
-          .from('Users')
-          .select('Role, Profile_name')
-          .eq('UserID', currentSession.user.id)
-          .single();
-
-        if (data && !error) {
-          setUserData(data);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    // เช็ค session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      fetchUserData(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      fetchUserData(session);
-    });
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      subscription.unsubscribe();
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleLogout = async () => {
@@ -85,8 +46,8 @@ function Navbar() {
     { name: 'สถิติ', path: '' },
   ];
 
-  const currentMenu = userData?.Role === 'Admin' ? adminMenu 
-                    : userData?.Role === 'Student' ? studentMenu 
+  const currentMenu = me?.role === 'Admin' ? adminMenu
+                    : me?.role === 'Student' ? studentMenu
                     : defaultMenu;
 
   return (
@@ -114,11 +75,11 @@ function Navbar() {
 
         {/* ส่วนขวา: ล็อกอิน หรือ โปรไฟล์ */}
         <div>
-          {session && userData ? (
+          {session && me ? (
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-gray-800 font-bold">
                 <UserCircle className="text-[#60a5fa] w-9 h-9 stroke-[1.5]" />
-                <span>{userData.Profile_name || 'ผู้ใช้'}</span>
+                <span>{me.profileName || 'ผู้ใช้'}</span>
               </div>
               <button 
                 onClick={handleLogout} 
