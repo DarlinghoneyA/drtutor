@@ -39,7 +39,7 @@ function Navbar() {
   ];
 
   const adminMenu = [
-    { name: 'คอร์สเรียน', path: '' },
+    { name: 'คอร์สเรียน', path: '/coursesmanagement' },
     { name: 'จัดตารางเรียน', path: '' },
     { name: 'จัดการบัญชี', path: '' },
     { name: 'จัดการผู้ใช้งาน', path: '/usermangement' },

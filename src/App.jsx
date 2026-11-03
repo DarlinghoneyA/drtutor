@@ -77,8 +77,14 @@ function App() {
             />
 
             {/* คอร์สเรียน (ยังไม่ได้กันสิทธิ์ รอทำโมดูล course) */}
-            <Route path="/coursesmanagement" element={<CoursesManagement />} />
-            <Route path="/add-course" element={<AddCourse />} />
+            <Route
+              path="/coursesmanagement"
+              element={me?.role === 'Admin' ? <CoursesManagement /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/add-course"
+              element={me?.role === 'Admin' ? <AddCourse /> : <Navigate to="/" />}
+            />
             <Route path="/courses" element={<Courses />} />
             <Route path="/course-details/:id" element={<CourseDetails />} />
           </Routes>
