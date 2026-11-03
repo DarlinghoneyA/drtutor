@@ -66,7 +66,11 @@ function CoursesManagement() {
                       ปิดรับสมัคร
                     </span>
                   )}
-                  <button className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-md text-[#60a5fa] hover:bg-gray-50 transition-colors">
+                  <button
+                    onClick={() => navigate(`/edit-course/${course.id}`)}
+                    className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-md text-[#60a5fa] hover:bg-gray-50 transition-colors"
+                    title="แก้ไขคอร์ส"
+                  >
                     <Settings size={20} strokeWidth={2} />
                   </button>
                 </div>

@@ -85,6 +85,10 @@ function App() {
               path="/add-course"
               element={me?.role === 'Admin' ? <AddCourse /> : <Navigate to="/" />}
             />
+            <Route
+              path="/edit-course/:id"
+              element={me?.role === 'Admin' ? <AddCourse /> : <Navigate to="/" />}
+            />
             <Route path="/courses" element={<Courses />} />
             <Route path="/course-details/:id" element={<CourseDetails />} />
           </Routes>

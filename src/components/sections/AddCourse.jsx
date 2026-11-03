@@ -1,99 +1,116 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';
-import { supabase } from '../../service/supabaseClient'; // 1. นำเข้า supabase client
+import { apiFetch } from '../../service/api';
+
+const EMPTY_FORM = {
+  courseName: '',
+  category: '', // ยังไม่มีคอลัมน์ใน DB จึงไม่ได้ส่งไปบันทึก
+  courseType: '',
+  totalHours: '',
+  price: '',
+  maxStudents: '',
+  description: '',
+  isActive: true,
+};
 
 function AddCourse() {
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false); // เพิ่ม State จัดการสถานะกำลังบันทึก
-  
-  const [formData, setFormData] = useState({
-    courseName: '',
-    category: '', // จะไม่ถูกส่งเข้า DB
-    courseType: '',
-    totalHours: '',
-    price: '',
-    description: '',
-  });
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingCourse, setLoadingCourse] = useState(isEdit);
+
+  // โหมดแก้ไข: ดึงข้อมูลคอร์สมาใส่ฟอร์ม
+  useEffect(() => {
+    if (!isEdit) {
+      setFormData(EMPTY_FORM);
+      return;
+    }
+    const loadCourse = async () => {
+      try {
+        const c = await apiFetch(`/admin/courses/${id}`);
+        setFormData({
+          courseName: c.courseName ?? '',
+          category: '',
+          courseType: c.courseType ?? '',
+          totalHours: c.totalHours ?? '',
+          price: c.price ?? '',
+          maxStudents: c.maxStudents ?? '',
+          description: c.description ?? '',
+          isActive: c.isActive,
+        });
+      } catch (err) {
+        alert('ไม่พบคอร์สนี้: ' + err.message);
+        navigate('/coursesmanagement');
+      } finally {
+        setLoadingCourse(false);
+      }
+    };
+    loadCourse();
+  }, [id, isEdit, navigate]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // ตรวจสอบว่ากรอกชื่อวิชาหรือยัง (บังคับกรอก)
-    if (!formData.courseName) {
-      alert('กรุณากรอกชื่อวิชา');
-      return;
-    }
-
     setIsSubmitting(true);
 
+    const body = {
+      courseName: formData.courseName,
+      courseType: formData.courseType,
+      totalHours: formData.totalHours,
+      price: formData.price,
+      maxStudents: formData.maxStudents,
+      description: formData.description,
+      isActive: formData.isActive,
+    };
+
     try {
-      // 2. ส่งข้อมูลบันทึกลงตาราง Courses
-      const { error } = await supabase
-        .from('Courses')
-        .insert([
-          {
-            Course_name: formData.courseName,
-            Course_type: formData.courseType || null,
-            Totalhours: formData.totalHours ? parseInt(formData.totalHours) : null,
-            Price: formData.price ? parseFloat(formData.price) : null,
-            Description: formData.description || null,
-            // หมายเหตุ: ละเว้น category และ image ไว้ตามที่คุณระบุ
-          }
-        ]);
-
-      if (error) throw error;
-
-      alert('เพิ่มคอร์สเรียนสำเร็จ!');
-      navigate('/courses'); // บันทึกเสร็จให้เด้งกลับไปหน้าจัดการคอร์ส
-
-    } catch (error) {
-      console.error('Error inserting course:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
+      await apiFetch(isEdit ? `/admin/courses/${id}` : '/admin/courses', {
+        method: isEdit ? 'PATCH' : 'POST',
+        body,
+      });
+      alert(isEdit ? 'บันทึกการแก้ไขสำเร็จ!' : 'เพิ่มคอร์สเรียนสำเร็จ!');
+      navigate('/coursesmanagement');
+    } catch (err) {
+      const details = err.details?.map((d) => `• ${d.message}`).join('\n');
+      alert(details || err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const inputClassName = "w-full px-4 py-2.5 bg-white border border-[#a5c0ff] rounded-md focus:outline-none focus:ring-2 focus:ring-[#799eff] text-gray-700 placeholder-gray-400";
-  const labelClassName = "block text-sm font-bold text-gray-800 mb-2";
+  const inputClassName =
+    'w-full px-4 py-2.5 bg-white border border-[#a5c0ff] rounded-md focus:outline-none focus:ring-2 focus:ring-[#799eff] text-gray-700 placeholder-gray-400';
+  const labelClassName = 'block text-sm font-bold text-gray-800 mb-2';
+
+  if (loadingCourse) {
+    return <div className="min-h-screen pt-32 text-center text-gray-500">กำลังโหลดข้อมูลคอร์ส...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#f4f6fa] pt-32 pb-12 px-4 font-sans">
       <div className="max-w-4xl mx-auto">
-        
         <h1 className="text-3xl md:text-4xl font-bold text-[#1e293b] mb-10 tracking-tight">
-          เพิ่มคอร์สเรียน
+          {isEdit ? 'แก้ไขคอร์สเรียน' : 'เพิ่มคอร์สเรียน'}
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             <div>
               <label className={labelClassName}>ชื่อวิชา</label>
-              <input
-                type="text"
-                name="courseName"
-                placeholder="ชื่อวิชา"
-                value={formData.courseName}
-                onChange={handleChange}
-                className={inputClassName}
-                required
-              />
+              <input type="text" name="courseName" placeholder="ชื่อวิชา" value={formData.courseName} onChange={handleChange} className={inputClassName} required />
             </div>
 
             <div>
               <label className={labelClassName}>หมวดหมู่วิชา</label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className={inputClassName}
-              >
+              <select name="category" value={formData.category} onChange={handleChange} className={inputClassName}>
                 <option value="">เลือกประเภทหมวดหมู่</option>
                 <option value="math">คณิตศาสตร์</option>
                 <option value="science">วิทยาศาสตร์</option>
@@ -103,12 +120,7 @@ function AddCourse() {
 
             <div>
               <label className={labelClassName}>ประเภทคอร์สเรียน</label>
-              <select
-                name="courseType"
-                value={formData.courseType}
-                onChange={handleChange}
-                className={inputClassName}
-              >
+              <select name="courseType" value={formData.courseType} onChange={handleChange} className={inputClassName}>
                 <option value="">เลือกประเภทคอร์สเรียน</option>
                 <option value="Private">แบบเดี่ยว</option>
                 <option value="Group">แบบกลุ่ม</option>
@@ -118,44 +130,34 @@ function AddCourse() {
 
             <div>
               <label className={labelClassName}>ชั่วโมงเรียน</label>
-              <input
-                type="number"
-                name="totalHours"
-                placeholder="ระบุชั่วโมงเรียน"
-                value={formData.totalHours}
-                onChange={handleChange}
-                className={inputClassName}
-              />
+              <input type="number" name="totalHours" placeholder="ระบุชั่วโมงเรียน" value={formData.totalHours} onChange={handleChange} className={inputClassName} />
             </div>
 
             <div>
               <label className={labelClassName}>ราคา</label>
-              <input
-                type="number"
-                name="price"
-                placeholder="ระบุราคา (บาท)"
-                value={formData.price}
-                onChange={handleChange}
-                className={inputClassName}
-              />
+              <input type="number" name="price" placeholder="ระบุราคา (บาท)" value={formData.price} onChange={handleChange} className={inputClassName} />
+            </div>
+
+            <div>
+              <label className={labelClassName}>จำนวนนักเรียนสูงสุด</label>
+              <input type="number" name="maxStudents" placeholder="เช่น 1 สำหรับเรียนเดี่ยว" value={formData.maxStudents} onChange={handleChange} className={inputClassName} />
             </div>
           </div>
 
           <div>
             <label className={labelClassName}>คำอธิบายเพิ่มเติม</label>
-            <textarea
-              name="description"
-              placeholder="คำอธิบายเพิ่มเติม"
-              rows="5"
-              value={formData.description}
-              onChange={handleChange}
-              className={`${inputClassName} resize-none`}
-            />
+            <textarea name="description" placeholder="คำอธิบายเพิ่มเติม" rows="5" value={formData.description} onChange={handleChange} className={`${inputClassName} resize-none`} />
           </div>
+
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-5 h-5 accent-[#2FA084]" />
+            <span className="font-bold text-gray-800">เปิดรับสมัคร</span>
+            <span className="text-sm text-gray-500">(ถ้าปิด นักเรียนจะไม่เห็นคอร์สนี้)</span>
+          </label>
 
           <div>
             <label className={labelClassName}>อัปโหลดรูปภาพ</label>
-            <div className="mt-1 flex flex-col items-center justify-center px-6 pt-10 pb-10 border-2 border-dashed border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors">
+            <div className="mt-1 flex flex-col items-center justify-center px-6 pt-10 pb-10 border-2 border-dashed border-gray-300 rounded-lg bg-white">
               <div className="flex flex-col items-center space-y-3">
                 <FileText className="w-12 h-12 text-[#799eff]" />
                 <p className="text-[#799eff] font-medium text-lg">ลากไฟล์วางที่นี่</p>
@@ -164,10 +166,7 @@ function AddCourse() {
                   <span className="px-4 text-[#799eff] font-medium text-lg">หรือ</span>
                   <div className="flex-grow border-t border-[#799eff]"></div>
                 </div>
-                <button
-                  type="button"
-                  className="bg-[#799eff] hover:bg-blue-500 text-white px-6 py-2 rounded-md font-medium transition-colors shadow-sm"
-                >
+                <button type="button" className="bg-[#799eff] text-white px-6 py-2 rounded-md font-medium shadow-sm opacity-60 cursor-not-allowed" disabled title="ยังไม่เปิดใช้งาน">
                   ค้นหาไฟล์
                 </button>
               </div>
@@ -175,12 +174,7 @@ function AddCourse() {
           </div>
 
           <div className="flex justify-end items-center gap-6 pt-6">
-            <button
-              type="button"
-              onClick={() => navigate('/coursesmanagement')}
-              className="text-gray-700 font-bold hover:text-gray-900 transition-colors"
-              disabled={isSubmitting}
-            >
+            <button type="button" onClick={() => navigate('/coursesmanagement')} className="text-gray-700 font-bold hover:text-gray-900 transition-colors" disabled={isSubmitting}>
               ยกเลิก
             </button>
             <button
@@ -188,10 +182,9 @@ function AddCourse() {
               disabled={isSubmitting}
               className={`${isSubmitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-[#799eff] hover:bg-blue-500'} text-white px-10 py-2.5 rounded-md font-bold transition-colors shadow-sm`}
             >
-              {isSubmitting ? 'กำลังบันทึก...' : 'ยืนยัน'}
+              {isSubmitting ? 'กำลังบันทึก...' : isEdit ? 'บันทึกการแก้ไข' : 'ยืนยัน'}
             </button>
           </div>
-          
         </form>
       </div>
     </div>
