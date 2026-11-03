@@ -151,9 +151,20 @@ function CourseDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* ฝั่งซ้าย: ข้อมูลคอร์ส */}
           <div className="lg:col-span-2 space-y-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
-              {course.courseName}
-            </h2>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
+                {course.courseName}
+              </h2>
+              {course.teachers?.length > 0 && (
+                <div className="flex flex-wrap items-center gap-4 mt-3 text-[#799eff] text-sm font-medium">
+                  {course.teachers.map((t) => (
+                    <div key={t.teacherId} className="flex items-center gap-1">
+                      <User size={16} /> {t.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="w-full h-[300px] md:h-[400px] bg-gray-200 rounded-xl overflow-hidden shadow-sm">
               <img

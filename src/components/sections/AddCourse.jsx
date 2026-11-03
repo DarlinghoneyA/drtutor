@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FileText } from 'lucide-react';
+import { FileText, User, X } from 'lucide-react';
 import { apiFetch } from '../../service/api';
 
 const EMPTY_FORM = {
@@ -23,10 +23,15 @@ function AddCourse() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingCourse, setLoadingCourse] = useState(isEdit);
 
+  const [courseTeachers, setCourseTeachers] = useState([]);
+  const [allTeachers, setAllTeachers] = useState([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+
   // โหมดแก้ไข: ดึงข้อมูลคอร์สมาใส่ฟอร์ม
   useEffect(() => {
     if (!isEdit) {
       setFormData(EMPTY_FORM);
+      setCourseTeachers([]);
       return;
     }
     const loadCourse = async () => {
@@ -42,6 +47,7 @@ function AddCourse() {
           description: c.description ?? '',
           isActive: c.isActive,
         });
+        setCourseTeachers(c.teachers ?? []);
       } catch (err) {
         alert('ไม่พบคอร์สนี้: ' + err.message);
         navigate('/coursesmanagement');
@@ -51,6 +57,14 @@ function AddCourse() {
     };
     loadCourse();
   }, [id, isEdit, navigate]);
+
+  // โหมดแก้ไข: โหลดรายชื่อครูทั้งหมดไว้ทำ dropdown
+  useEffect(() => {
+    if (!isEdit) return;
+    apiFetch('/admin/teachers')
+      .then(setAllTeachers)
+      .catch((err) => console.error('โหลดรายชื่อครูไม่สำเร็จ:', err));
+  }, [isEdit]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -85,6 +99,36 @@ function AddCourse() {
       setIsSubmitting(false);
     }
   };
+
+  // ---- จัดการครูผู้สอน (บันทึกทันที ไม่ต้องกดบันทึกฟอร์ม) ----
+  const handleAddTeacher = async () => {
+    if (!selectedTeacherId) return;
+    try {
+      const updated = await apiFetch(`/admin/courses/${id}/teachers`, {
+        method: 'POST',
+        body: { teacherId: selectedTeacherId },
+      });
+      setCourseTeachers(updated.teachers);
+      setSelectedTeacherId('');
+    } catch (err) {
+      alert('เพิ่มครูไม่สำเร็จ: ' + err.message);
+    }
+  };
+
+  const handleRemoveTeacher = async (teacherId) => {
+    if (!window.confirm('เอาครูคนนี้ออกจากคอร์สใช่ไหม?')) return;
+    try {
+      const updated = await apiFetch(`/admin/courses/${id}/teachers/${teacherId}`, { method: 'DELETE' });
+      setCourseTeachers(updated.teachers);
+    } catch (err) {
+      alert('เอาครูออกไม่สำเร็จ: ' + err.message);
+    }
+  };
+
+  // ครูที่ยังไม่ได้อยู่ในคอร์สนี้ (ไว้ใส่ใน dropdown)
+  const availableTeachers = allTeachers.filter(
+    (t) => !courseTeachers.some((ct) => ct.teacherId === t.teacherId),
+  );
 
   const inputClassName =
     'w-full px-4 py-2.5 bg-white border border-[#a5c0ff] rounded-md focus:outline-none focus:ring-2 focus:ring-[#799eff] text-gray-700 placeholder-gray-400';
@@ -154,6 +198,47 @@ function AddCourse() {
             <span className="font-bold text-gray-800">เปิดรับสมัคร</span>
             <span className="text-sm text-gray-500">(ถ้าปิด นักเรียนจะไม่เห็นคอร์สนี้)</span>
           </label>
+
+          {/* ครูผู้สอน: แสดงเฉพาะโหมดแก้ไข */}
+          {isEdit && (
+            <div className="bg-white border border-[#a5c0ff] rounded-md p-5">
+              <label className={labelClassName}>ครูผู้สอน</label>
+
+              {courseTeachers.length === 0 ? (
+                <p className="text-sm text-gray-400 mb-4">ยังไม่มีครูในคอร์สนี้</p>
+              ) : (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {courseTeachers.map((t) => (
+                    <span key={t.teacherId} className="flex items-center gap-1.5 bg-[#eef3ff] text-[#4a6fd1] px-3 py-1.5 rounded-full text-sm font-medium">
+                      <User size={14} /> {t.name}
+                      <button type="button" onClick={() => handleRemoveTeacher(t.teacherId)} className="hover:text-red-500" title="เอาออก">
+                        <X size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <select value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)} className={inputClassName}>
+                  <option value="">เลือกครูที่จะเพิ่ม</option>
+                  {availableTeachers.map((t) => (
+                    <option key={t.teacherId} value={t.teacherId}>
+                      {t.name}{t.fullName && t.fullName !== t.name ? ` (${t.fullName})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddTeacher}
+                  disabled={!selectedTeacherId}
+                  className="bg-[#2FA084] hover:bg-[#248169] disabled:bg-gray-300 text-white px-5 rounded-md font-bold whitespace-nowrap"
+                >
+                  เพิ่มครู
+                </button>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className={labelClassName}>อัปโหลดรูปภาพ</label>
